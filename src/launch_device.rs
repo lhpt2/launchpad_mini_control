@@ -119,6 +119,7 @@ impl From<LaunchMessage> for PadIdentifier {
     }
 }
 
+#[derive(Debug)]
 pub struct MatPos {
     pub row: u8,
     pub col: u8,
@@ -223,38 +224,43 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         Ok(())
     }
 
-    pub fn send_messages(&mut self, msgs: Vec<LaunchMessage>) {
-       let _ = self.out_port.write_messages(msgs);
+    pub fn send_messages(&mut self, msgs: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError>{
+        self.out_port.write_messages(msgs)?;
+        Ok(())
     }
 
-    pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) {
-        let _ = self.out_port.write_message(LaunchMessage {
+    pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) -> Result<(), MidiInterfaceError>{
+        self.out_port.write_message(LaunchMessage {
             status: 0xb0,
             data1,
             data2,
-        });
+        })?;
+        Ok(())
     }
 
-    pub fn blackout(&mut self) {
-        self.set_all(Color::Black);
+    pub fn blackout(&mut self) -> Result<(), MidiInterfaceError> {
+        self.set_all(Color::Black)?;
+        Ok(())
     }
 
-    pub fn full_blackout(&mut self) {
+    pub fn full_blackout(&mut self) -> Result<(), MidiInterfaceError> {
         self.set_all(Color::Black);
         for i in 0..8 {
-            self.send_ctl_msg(0x68 + i, Color::Black as u8);
+            self.send_ctl_msg(0x68 + i, Color::Black as u8)?;
         }
+        Ok(())
     }
 
-    pub fn set_position(&mut self, row: u8, col: u8, color: Color) {
-        let _ = self.out_port.write_message(LaunchMessage {
+    pub fn set_position(&mut self, row: u8, col: u8, color: Color) -> Result<(), MidiInterfaceError>{
+        self.out_port.write_message(LaunchMessage {
             status: 0x90,
             data1: Key::from(MatPos::new(row, col)),
             data2: color as u8,
-        });
+        })?;
+        Ok(())
     }
 
-    pub fn set_all(&mut self, color: Color) {
+    pub fn set_all(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
         let mut msg: Vec<LaunchMessage> = Vec::with_capacity(MAX_PAD_COLSROWS * MAX_PAD_COLSROWS);
         for (x, y) in cartesian!(0..8, 0..9) {
             //self.send_note_msg(true, Key::from(MatPos::new(x, y)), color.into());
@@ -265,11 +271,13 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
             });
         }
 
-        let _ = self.out_port.write_messages(msg);
+        self.out_port.write_messages(msg)?;
+        Ok(())
     }
 
-    pub fn select_mode(&mut self, mode: GridMode) {
-        self.send_ctl_msg(0x00, mode as u8);
+    pub fn select_mode(&mut self, mode: GridMode) -> Result<(), MidiInterfaceError> {
+        self.send_ctl_msg(0x00, mode as u8)?;
+        Ok(())
     }
 
     pub fn is_double_buffered(&self) -> bool {
@@ -277,7 +285,7 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         buffered == BufferSetting::OneActive as u8 || buffered == BufferSetting::ZeroActive as u8
     }
 
-    pub fn set_matrix(&mut self, mat: &[[Color; 9]; 8]) {
+    pub fn set_matrix(&mut self, mat: &[[Color; 9]; 8]) -> Result<(), MidiInterfaceError> {
         let mut res: Vec<LaunchMessage> = Vec::with_capacity(mat.len());
 
         for (i, parent) in mat.iter().enumerate() {
@@ -290,10 +298,11 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
             }
         }
 
-        let _ = self.out_port.write_messages(res);
+        self.out_port.write_messages(res)?;
+        Ok(())
     }
 
-    pub fn set_first_row(&mut self, color: Color) {
+    pub fn set_first_row(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
         let mut msg: Vec<LaunchMessage> = Vec::with_capacity(8);
         for i in 0..8 {
             msg.push(LaunchMessage {
@@ -303,14 +312,16 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
             });
         }
 
-        let _ = self.out_port.write_messages(msg);
+        self.out_port.write_messages(msg)?;
+        Ok(())
     }
 
-    pub fn reset(&mut self) {
-        self.send_ctl_msg(0x00, 0x00);
+    pub fn reset(&mut self) -> Result<(), MidiInterfaceError>{
+        self.send_ctl_msg(0x00, 0x00)?;
+        Ok(())
     }
 
-    pub fn set_buffer_mode(&mut self, setting: BufferSetting, copy: bool) {
+    pub fn set_buffer_mode(&mut self, setting: BufferSetting, copy: bool) -> Result<(), MidiInterfaceError>{
         if copy {
             self.buffer_setting = 0x30;
         } else {
@@ -318,25 +329,30 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         }
 
         self.buffer_setting |= setting as u8;
-        self.send_ctl_msg(0x00, self.buffer_setting);
+        self.send_ctl_msg(0x00, self.buffer_setting)?;
+        Ok(())
     }
 
-    pub fn disable_double_buffering(&mut self) {
-        self.set_buffer_mode(BufferSetting::ZeroOnly, false);
+    pub fn disable_double_buffering(&mut self) -> Result<(), MidiInterfaceError> {
+        self.set_buffer_mode(BufferSetting::ZeroOnly, false)?;
+        Ok(())
     }
 
-    pub fn swap_buffers(&mut self, copy: bool) {
+    pub fn swap_buffers(&mut self, copy: bool) -> Result<(), MidiInterfaceError> {
         let setting = self.buffer_setting & 0x0F;
 
         if setting == BufferSetting::OneActive as u8 {
-            self.set_buffer_mode(BufferSetting::ZeroActive, copy);
+            self.set_buffer_mode(BufferSetting::ZeroActive, copy)?;
         } else {
-            self.set_buffer_mode(BufferSetting::OneActive, copy);
+            self.set_buffer_mode(BufferSetting::OneActive, copy)?;
         }
+
+        Ok(())
     }
 
-    pub fn hard_swap(&mut self) {
-        self.swap_buffers(false);
+    pub fn hard_swap(&mut self) -> Result<(), MidiInterfaceError> {
+        self.swap_buffers(false)?;
+        Ok(())
     }
 
     pub fn set_duty_cycle(&mut self, numerator: u8, denominator: u8) -> Result<(), MidiInterfaceError>{
