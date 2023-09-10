@@ -1,8 +1,8 @@
-use portmidi as pm;
-use portmidi::{InputPort, OutputPort, MidiMessage, MidiEvent};
-use crate::{BUFFER_SIZE, midilib as midi};
-use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
 use crate::midilib::MidiInterfaceError;
+use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
+use crate::{midilib as midi, BUFFER_SIZE};
+use portmidi as pm;
+use portmidi::{InputPort, MidiEvent, MidiMessage, OutputPort};
 
 impl From<pm::types::Error> for MidiInterfaceError {
     fn from(value: pm::Error) -> Self {
@@ -11,7 +11,9 @@ impl From<pm::types::Error> for MidiInterfaceError {
             pm::Error::Unknown => MidiInterfaceError::Unknown(value.to_string()),
             pm::Error::Unimplemented => MidiInterfaceError::Unimplemented(value.to_string()),
             pm::Error::NoDefaultDevice => MidiInterfaceError::NoDefaultDevice(value.to_string()),
-            pm::Error::NotAnOutputDevice => MidiInterfaceError::NotAnOutputDevice(value.to_string()),
+            pm::Error::NotAnOutputDevice => {
+                MidiInterfaceError::NotAnOutputDevice(value.to_string())
+            }
             pm::Error::NotAnInputDevice => MidiInterfaceError::NotAnInputDevice(value.to_string()),
             pm::Error::PortMidi(err) => MidiInterfaceError::GenericBackendErr(err.to_string()),
         }
@@ -77,7 +79,7 @@ impl From<LaunchMessage> for MidiMessage {
 impl From<LaunchMessage> for MidiEvent {
     fn from(value: LaunchMessage) -> Self {
         MidiEvent {
-            message:  MidiMessage::from(value),
+            message: MidiMessage::from(value),
             timestamp: 0,
         }
     }
@@ -90,9 +92,12 @@ impl midi::Input for InputPort<'_> {
     fn read_n(&self, count: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
         let res = self.read_n(count)?;
         let res = match res {
-            None => { None },
+            None => None,
             Some(events) => {
-                let events: Vec<LaunchMessage> = events.into_iter().map(|ev| LaunchMessage::from(ev.message)).collect();
+                let events: Vec<LaunchMessage> = events
+                    .into_iter()
+                    .map(|ev| LaunchMessage::from(ev.message))
+                    .collect();
                 Some(events)
             }
         };
@@ -101,7 +106,7 @@ impl midi::Input for InputPort<'_> {
 }
 
 impl midi::Output for OutputPort<'_> {
-    fn write_message(&mut self, msg: LaunchMessage) -> Result<(), MidiInterfaceError>{
+    fn write_message(&mut self, msg: LaunchMessage) -> Result<(), MidiInterfaceError> {
         Ok(self.write_message(MidiMessage::from(msg))?)
     }
 
@@ -122,20 +127,36 @@ impl<'a> midi::MidiInterface<'a> for pm::PortMidi {
     fn get_input(&'a self, identifier: Identifier) -> Result<InputPort<'a>, MidiInterfaceError> {
         let devs: Vec<pm::DeviceInfo> = self.devices()?;
         let input: pm::DeviceInfo = match identifier {
-           Identifier::String(name) => {
-               let filt_devs= devs.into_iter().filter(|i| i.is_input() && i.name().eq(&name)).collect::<Vec<_>>();
-               match filt_devs.first() {
-                   Some(d) => d.to_owned(),
-                   None => { return Err(MidiInterfaceError::NotAnInputDevice(format!("device with name {} not found", name))); },
-               }
-           },
-           Identifier::Number(id) => {
-               let filt_devs = devs.into_iter().filter(|i| i.is_input() && i.id() == id).collect::<Vec<_>>();
-               match filt_devs.first() {
-                   Some(d) => d.to_owned(),
-                   None => { return Err(MidiInterfaceError::NotAnInputDevice(format!("device with id {}", id))); }
-               }
-           },
+            Identifier::String(name) => {
+                let filt_devs = devs
+                    .into_iter()
+                    .filter(|i| i.is_input() && i.name().eq(&name))
+                    .collect::<Vec<_>>();
+                match filt_devs.first() {
+                    Some(d) => d.to_owned(),
+                    None => {
+                        return Err(MidiInterfaceError::NotAnInputDevice(format!(
+                            "device with name {} not found",
+                            name
+                        )));
+                    }
+                }
+            }
+            Identifier::Number(id) => {
+                let filt_devs = devs
+                    .into_iter()
+                    .filter(|i| i.is_input() && i.id() == id)
+                    .collect::<Vec<_>>();
+                match filt_devs.first() {
+                    Some(d) => d.to_owned(),
+                    None => {
+                        return Err(MidiInterfaceError::NotAnInputDevice(format!(
+                            "device with id {}",
+                            id
+                        )));
+                    }
+                }
+            }
         };
 
         Ok(self.input_port(input, BUFFER_SIZE)?)
@@ -145,16 +166,32 @@ impl<'a> midi::MidiInterface<'a> for pm::PortMidi {
         let devs: Vec<pm::DeviceInfo> = self.devices()?;
         let output: pm::DeviceInfo = match identifier {
             Identifier::String(name) => {
-                let filt_devs = devs.into_iter().filter(|i| i.is_output() && i.name().eq(&name)).collect::<Vec<_>>();
+                let filt_devs = devs
+                    .into_iter()
+                    .filter(|i| i.is_output() && i.name().eq(&name))
+                    .collect::<Vec<_>>();
                 match filt_devs.first() {
-                    None => { return Err(MidiInterfaceError::NotAnOutputDevice(format!("output device with name {} not found", name))); },
+                    None => {
+                        return Err(MidiInterfaceError::NotAnOutputDevice(format!(
+                            "output device with name {} not found",
+                            name
+                        )));
+                    }
                     Some(d) => d.to_owned(),
                 }
-            },
+            }
             Identifier::Number(id) => {
-                let filt_devs= devs.into_iter().filter(|i| i.is_output() && i.id() == id).collect::<Vec<_>>();
+                let filt_devs = devs
+                    .into_iter()
+                    .filter(|i| i.is_output() && i.id() == id)
+                    .collect::<Vec<_>>();
                 match filt_devs.first() {
-                    None => { return Err(MidiInterfaceError::NotAnOutputDevice(format!("output device with id {} not found", id))); },
+                    None => {
+                        return Err(MidiInterfaceError::NotAnOutputDevice(format!(
+                            "output device with id {} not found",
+                            id
+                        )));
+                    }
                     Some(d) => d.to_owned(),
                 }
             }
@@ -163,20 +200,33 @@ impl<'a> midi::MidiInterface<'a> for pm::PortMidi {
         Ok(self.output_port(output, BUFFER_SIZE)?)
     }
 
-    fn get_in_out(&'a self, name: &str) -> Result<(Self::MidiInput, Self::MidiOutput), MidiInterfaceError> {
+    fn get_in_out(
+        &'a self,
+        name: &str,
+    ) -> Result<(Self::MidiInput, Self::MidiOutput), MidiInterfaceError> {
         let devs: Vec<pm::DeviceInfo> = self.devices()?;
         let devs: Vec<pm::DeviceInfo> = devs.into_iter().filter(|d| d.name() == name).collect();
 
         let in_p: Vec<&pm::DeviceInfo> = devs.iter().filter(|d| d.is_input()).collect();
         let in_p = match in_p.first() {
-            None => { return Err(MidiInterfaceError::NotAnInputDevice(format!("no input with name {} found", name))); },
-            Some(d) => { d.to_owned().to_owned() },
+            None => {
+                return Err(MidiInterfaceError::NotAnInputDevice(format!(
+                    "no input with name {} found",
+                    name
+                )));
+            }
+            Some(d) => d.to_owned().to_owned(),
         };
 
         let out_p: Vec<&pm::DeviceInfo> = devs.iter().filter(|d| d.is_output()).collect();
         let out_p = match out_p.first() {
-            None => { return Err(MidiInterfaceError::NotAnOutputDevice(format!("no output with name {} found", name))); },
-            Some(d) => { d.to_owned().to_owned() },
+            None => {
+                return Err(MidiInterfaceError::NotAnOutputDevice(format!(
+                    "no output with name {} found",
+                    name
+                )));
+            }
+            Some(d) => d.to_owned().to_owned(),
         };
 
         let in_p = self.input_port(in_p, BUFFER_SIZE)?;
