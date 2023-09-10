@@ -5,6 +5,7 @@ mod pad_identifier;
 mod pm_impl;
 
 pub use launch_device::*;
+pub use mat_pos::MatPos;
 pub use midilib::*;
 pub use pm_impl::*;
 
