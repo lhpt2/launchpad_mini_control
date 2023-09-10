@@ -177,7 +177,7 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
     }
 
     pub fn poll(&self) -> Result<bool, MidiInterfaceError> {
-       Ok(self.in_port.poll()?)
+       self.in_port.poll()
     }
 
     pub fn read_single_msg(&self) -> Result<Option<LaunchMessage>, MidiInterfaceError> {
@@ -199,7 +199,7 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
     }
 
     pub fn read_n_msgs(&self, n: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
-       Ok(self.in_port.read_n(n)?)
+       self.in_port.read_n(n)
     }
 
     pub fn send_note_msg(&mut self, on: bool, key: u8, vel: u8) -> Result<(), MidiInterfaceError>{
