@@ -1,7 +1,9 @@
-use cartesian::*;
-use crate::midilib::{LaunchMessage, MidiInterfaceError};
-use crate::midilib::Output;
+use crate::mat_pos::MatPos;
 use crate::midilib::Input;
+use crate::midilib::Output;
+use crate::midilib::{LaunchMessage, MidiInterfaceError};
+use crate::pad_identifier::PadIdentifier;
+use cartesian::*;
 
 const SCENE_LAUNCH_COL: usize = 8;
 const AUTOMAP_ROW: usize = 8;
@@ -27,7 +29,7 @@ const COLOR_GRADIENT: [Color; 16] = [
 ];
 
 #[derive(PartialEq)]
-enum MessageType {
+pub enum MessageType {
     Off = 0x80,
     On = 0x90,
     Ctl = 0xb0,
@@ -66,7 +68,6 @@ pub enum GridMode {
 }
 
 type Key = u8;
-
 impl From<MatPos> for Key {
     fn from(pos: MatPos) -> Self {
         if pos.row > 7 {
@@ -77,93 +78,16 @@ impl From<MatPos> for Key {
     }
 }
 
-struct PadIdentifier {
-    status: MessageType,
-    key: u8,
-}
-
-impl From<MatPos> for PadIdentifier {
-    fn from(pos: MatPos) -> Self {
-        if pos.row > 7 {
-            PadIdentifier {
-                status: MessageType::Ctl,
-                key: 0x68 + pos.col,
-            }
-        } else {
-            PadIdentifier {
-                status: MessageType::On,
-                key: (0x10 * pos.row) + pos.col,
-            }
-        }
-    }
-}
-
-impl From<LaunchMessage> for PadIdentifier {
-    fn from(msg: LaunchMessage) -> Self {
-        if msg.status == MessageType::Ctl as u8 {
-            PadIdentifier {
-                status: MessageType::Ctl,
-                key: msg.data1,
-            }
-        } else if msg.status == MessageType::On as u8 {
-            PadIdentifier {
-                status: MessageType::On,
-                key: msg.data1,
-            }
-        } else {
-            PadIdentifier {
-                status: MessageType::Off,
-                key: msg.data1,
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct MatPos {
-    pub row: u8,
-    pub col: u8,
-}
-
-impl MatPos {
-    fn new(row: u8, col: u8) -> MatPos {
-        MatPos { row, col }
-    }
-    pub fn get_as_tuple(self) -> (u8, u8) {
-        (self.row, self.col)
-    }
-}
-
-impl From<LaunchMessage> for MatPos {
-    fn from(msg: LaunchMessage) -> Self {
-        MatPos::from(PadIdentifier::from(msg))
-    }
-}
-
-impl From<PadIdentifier> for MatPos {
-    fn from(padid: PadIdentifier) -> Self {
-        if padid.status == MessageType::Ctl {
-            MatPos {
-                row: 8,
-                col: padid.key % 0x68,
-            }
-        } else {
-            MatPos {
-                row: padid.key / 0x10,
-                col: padid.key % 0x10,
-            }
-        }
-    }
-}
-
 pub struct LaunchDevice<'a, I: Input, O: Output> {
     in_port: &'a I,
     out_port: &'a mut O,
     buffer_setting: u8,
 }
-
 impl<'a, I, O> LaunchDevice<'a, I, O>
-    where I: Input + 'a, O: Output + 'a {
+where
+    I: Input + 'a,
+    O: Output + 'a,
+{
     pub fn new(
         in_port: &'a I,
         out_port: &'a mut O,
@@ -178,32 +102,28 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
     }
 
     pub fn poll(&self) -> Result<bool, MidiInterfaceError> {
-       self.in_port.poll()
+        self.in_port.poll()
     }
 
     pub fn read_single_msg(&self) -> Result<Option<LaunchMessage>, MidiInterfaceError> {
-       let opt = self.in_port.read_n(1)?;
-       match opt {
-           None =>  Ok(None),
-           Some(msg) => {
-             match msg.first() {
-                 None => {
-                     Ok(None)
-                 },
-                 Some(m) => {
-                     let res: LaunchMessage = (*m).clone();
-                     Ok(Some(res))
-                 },
-              }
-           },
-       }
+        let opt = self.in_port.read_n(1)?;
+        match opt {
+            None => Ok(None),
+            Some(msg) => match msg.first() {
+                None => Ok(None),
+                Some(m) => {
+                    let res: LaunchMessage = (*m).clone();
+                    Ok(Some(res))
+                }
+            },
+        }
     }
 
     pub fn read_n_msgs(&self, n: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
-       self.in_port.read_n(n)
+        self.in_port.read_n(n)
     }
 
-    pub fn send_note_msg(&mut self, on: bool, key: u8, vel: u8) -> Result<(), MidiInterfaceError>{
+    pub fn send_note_msg(&mut self, on: bool, key: u8, vel: u8) -> Result<(), MidiInterfaceError> {
         let mut vel = vel;
 
         if !self.is_double_buffered() {
@@ -224,12 +144,12 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         Ok(())
     }
 
-    pub fn send_messages(&mut self, msgs: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError>{
+    pub fn send_messages(&mut self, msgs: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError> {
         self.out_port.write_messages(msgs)?;
         Ok(())
     }
 
-    pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) -> Result<(), MidiInterfaceError>{
+    pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) -> Result<(), MidiInterfaceError> {
         self.out_port.write_message(LaunchMessage {
             status: 0xb0,
             data1,
@@ -251,7 +171,12 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         Ok(())
     }
 
-    pub fn set_position(&mut self, row: u8, col: u8, color: Color) -> Result<(), MidiInterfaceError>{
+    pub fn set_position(
+        &mut self,
+        row: u8,
+        col: u8,
+        color: Color,
+    ) -> Result<(), MidiInterfaceError> {
         self.out_port.write_message(LaunchMessage {
             status: 0x90,
             data1: Key::from(MatPos::new(row, col)),
@@ -316,12 +241,16 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         Ok(())
     }
 
-    pub fn reset(&mut self) -> Result<(), MidiInterfaceError>{
+    pub fn reset(&mut self) -> Result<(), MidiInterfaceError> {
         self.send_ctl_msg(0x00, 0x00)?;
         Ok(())
     }
 
-    pub fn set_buffer_mode(&mut self, setting: BufferSetting, copy: bool) -> Result<(), MidiInterfaceError>{
+    pub fn set_buffer_mode(
+        &mut self,
+        setting: BufferSetting,
+        copy: bool,
+    ) -> Result<(), MidiInterfaceError> {
         if copy {
             self.buffer_setting = 0x30;
         } else {
@@ -355,7 +284,11 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
         Ok(())
     }
 
-    pub fn set_duty_cycle(&mut self, numerator: u8, denominator: u8) -> Result<(), MidiInterfaceError>{
+    pub fn set_duty_cycle(
+        &mut self,
+        numerator: u8,
+        denominator: u8,
+    ) -> Result<(), MidiInterfaceError> {
         let mut numerator = numerator;
         let mut denominator = denominator;
 
