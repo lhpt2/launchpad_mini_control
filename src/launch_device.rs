@@ -128,7 +128,7 @@ impl MatPos {
     fn new(row: u8, col: u8) -> MatPos {
         MatPos { row, col }
     }
-    fn get_as_tuple(self) -> (u8, u8) {
+    pub fn get_as_tuple(self) -> (u8, u8) {
         (self.row, self.col)
     }
 }
@@ -174,6 +174,32 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
             out_port,
             buffer_setting: 0,
         }
+    }
+
+    pub fn poll(&self) -> Result<bool, MidiInterfaceError> {
+       Ok(self.in_port.poll()?)
+    }
+
+    pub fn read_single_msg(&self) -> Result<Option<LaunchMessage>, MidiInterfaceError> {
+       let opt = self.in_port.read_n(1)?;
+       match opt {
+           None =>  Ok(None),
+           Some(msg) => {
+             match msg.first() {
+                 None => {
+                     Ok(None)
+                 },
+                 Some(m) => {
+                     let res: LaunchMessage = (*m).clone();
+                     Ok(Some(res))
+                 },
+              }
+           },
+       }
+    }
+
+    pub fn read_n_msgs(&self, n: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
+       Ok(self.in_port.read_n(n)?)
     }
 
     pub fn send_note_msg(&mut self, on: bool, key: u8, vel: u8) -> Result<(), MidiInterfaceError>{
