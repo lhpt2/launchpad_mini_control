@@ -1,4 +1,3 @@
-use std::fmt::format;
 use portmidi as pm;
 use portmidi::{InputPort, OutputPort, MidiMessage, MidiEvent};
 use crate::{BUFFER_SIZE, midilib as midi};
