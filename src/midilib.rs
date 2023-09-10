@@ -50,6 +50,7 @@ impl DeviceInfo {
 	}
 }
 
+#[derive(Debug, Clone)]
 pub struct LaunchMessage {
 	pub status: u8,
 	pub data1: u8,
