@@ -244,7 +244,7 @@ impl<'a, I, O> LaunchDevice<'a, I, O>
     }
 
     pub fn full_blackout(&mut self) -> Result<(), MidiInterfaceError> {
-        self.set_all(Color::Black);
+        self.set_all(Color::Black)?;
         for i in 0..8 {
             self.send_ctl_msg(0x68 + i, Color::Black as u8)?;
         }
