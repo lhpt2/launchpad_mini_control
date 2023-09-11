@@ -2,7 +2,7 @@ use crate::help_types::{BufferSetting, Color, GridMode, Key, MessageType};
 use crate::mat_pos::MatPos;
 use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
 use cartesian::*;
-use portmidi::{InputPort, OutputPort};
+
 
 const SCENE_LAUNCH_COL: usize = 8;
 const AUTOMAP_ROW: usize = 8;
@@ -22,8 +22,6 @@ where
     pub fn new(
         in_port: I,
         out_port: O,
-        //in_port: pm::InputPort<'a>,
-        //out_port: pm::OutputPort<'a>,
     ) -> LaunchDevice<I, O> {
         LaunchDevice {
             in_port,
