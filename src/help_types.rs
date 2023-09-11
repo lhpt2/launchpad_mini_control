@@ -1,5 +1,5 @@
-use crate::MatPos;
 use crate::pad_identifier::PadIdentifier;
+use crate::MatPos;
 
 const COLOR_GRADIENT: [Color; 16] = [
     Color::Black,

@@ -1,6 +1,6 @@
+use crate::help_types::{BufferSetting, Color, GridMode, Key, MessageType};
 use crate::mat_pos::MatPos;
-use crate::midilib::{LaunchMessage, MidiInterfaceError, Output, Input};
-use crate::help_types::{Color, MessageType, Key, BufferSetting, GridMode};
+use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
 use cartesian::*;
 
 const SCENE_LAUNCH_COL: usize = 8;

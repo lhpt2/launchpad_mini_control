@@ -1,6 +1,6 @@
+use crate::help_types::MessageType;
 use crate::pad_identifier::PadIdentifier;
 use crate::LaunchMessage;
-use crate::help_types::MessageType;
 
 #[derive(Debug)]
 pub struct MatPos {

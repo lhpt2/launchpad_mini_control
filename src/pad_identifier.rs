@@ -1,6 +1,6 @@
+use crate::help_types::MessageType;
 use crate::mat_pos::MatPos;
 use crate::LaunchMessage;
-use crate::help_types::MessageType;
 
 pub struct PadIdentifier {
     pub(crate) status: MessageType,
