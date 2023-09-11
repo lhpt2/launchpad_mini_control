@@ -3,7 +3,6 @@ use crate::mat_pos::MatPos;
 use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
 use cartesian::*;
 
-
 const SCENE_LAUNCH_COL: usize = 8;
 const AUTOMAP_ROW: usize = 8;
 const NOTEGRID_MAX_LEN: usize = 8;
