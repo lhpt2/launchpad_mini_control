@@ -2,28 +2,29 @@ use crate::help_types::{BufferSetting, Color, GridMode, Key, MessageType};
 use crate::mat_pos::MatPos;
 use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
 use cartesian::*;
+use portmidi::{InputPort, OutputPort};
 
 const SCENE_LAUNCH_COL: usize = 8;
 const AUTOMAP_ROW: usize = 8;
 const NOTEGRID_MAX_LEN: usize = 8;
 const MAX_PAD_COLSROWS: usize = 9;
 
-pub struct LaunchDevice<'a, I: Input, O: Output> {
-    in_port: &'a I,
-    out_port: &'a mut O,
+pub struct LaunchDevice<I: Input, O: Output> {
+    in_port: I,
+    out_port: O,
     buffer_setting: u8,
 }
-impl<'a, I, O> LaunchDevice<'a, I, O>
+impl<'a, I, O> LaunchDevice<I, O>
 where
     I: Input + 'a,
     O: Output + 'a,
 {
     pub fn new(
-        in_port: &'a I,
-        out_port: &'a mut O,
+        in_port: I,
+        out_port: O,
         //in_port: pm::InputPort<'a>,
         //out_port: pm::OutputPort<'a>,
-    ) -> LaunchDevice<'a, I, O> {
+    ) -> LaunchDevice<I, O> {
         LaunchDevice {
             in_port,
             out_port,
