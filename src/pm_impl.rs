@@ -1,3 +1,10 @@
+/* Copyright (C) 2023 Lucas Haupt
+
+This program is distributed under the terms of the 
+GNU Lesser General Public License v3.0, 
+see COPYING.LESSER file for license information
+*/
+
 use crate::midilib::MidiInterfaceError;
 use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
 use crate::{midilib as midi, BUFFER_SIZE};
