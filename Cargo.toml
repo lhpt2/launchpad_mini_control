@@ -1,10 +1,19 @@
 [package]
-name = "launch_device"
+name = "launchpad_mini_control"
+description = "library for easier communication with a Launchpad Mini per Midi protocol"
+authors = ["Lucas Haupt"]
 version = "0.1.0"
 edition = "2021"
+license = "LGPL-3.0-or-later"
+license-file = "COPYING.LESSER"
+readme = "README.md"
+repository = "https://github.com/lhpt2/launchpadmini_control"
+homepage = "https://github.com/lhpt2/launchpadmini_control"
+keywords = ["midi", "launchpad"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-portmidi = { path = "../../pm-rs" }
+portmidi = "0.3.0"
 cartesian = "0.2.1"
