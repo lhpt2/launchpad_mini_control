@@ -15,5 +15,5 @@ keywords = ["midi", "launchpad"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-portmidi = "0.3.0"
+portmidi = "0.3.0" # change if other backend favored (has to implement traits in midilib.rs)
 cartesian = "0.2.1"
