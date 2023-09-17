@@ -5,7 +5,7 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-//! #PM_IMPL
+//! # PM_IMPL
 //!
 //! Reference implementation for a midi backend
 //! Implementation of the midilib traits for Portmidi library
@@ -14,7 +14,11 @@ use crate::midilib::MidiInterfaceError;
 use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
 use crate::{midilib as midi, BUFFER_SIZE};
 use portmidi as pm;
-use portmidi::{InputPort, MidiEvent, MidiMessage, OutputPort};
+use portmidi::{MidiEvent, MidiMessage};
+
+pub type InputPort<'a> = portmidi::InputPort<'a>;
+pub type OutputPort<'a> = portmidi::OutputPort<'a>;
+pub type MidiImpl = portmidi::PortMidi;
 
 /// Implementation of the Error type MidiInterfaceError
 impl From<pm::types::Error> for MidiInterfaceError {
@@ -132,7 +136,7 @@ impl midi::Output for OutputPort<'_> {
 }
 
 /// Implementation of MidiInterface trait for PortMidi
-impl<'a> midi::MidiInterface<'a> for pm::PortMidi {
+impl<'a> midi::MidiInterface<'a> for MidiImpl {
     type MidiInput = InputPort<'a>;
     type MidiOutput = OutputPort<'a>;
 
