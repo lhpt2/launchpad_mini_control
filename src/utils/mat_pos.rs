@@ -5,10 +5,11 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-use crate::help_types::MessageType;
-use crate::pad_identifier::PadIdentifier;
+use crate::utils::MessageType;
+use crate::utils::PadIdentifier;
 use crate::LaunchMessage;
 
+/// Struct representing a position on the Launchpad matrix with various type conversions
 #[derive(Debug)]
 pub struct MatPos {
     pub row: u8,

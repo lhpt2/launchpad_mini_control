@@ -5,12 +5,18 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
+//! #PM_IMPL
+//!
+//! Reference implementation for a midi backend
+//! Implementation of the midilib traits for Portmidi library
+
 use crate::midilib::MidiInterfaceError;
 use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
 use crate::{midilib as midi, BUFFER_SIZE};
 use portmidi as pm;
 use portmidi::{InputPort, MidiEvent, MidiMessage, OutputPort};
 
+/// Implementation of the Error type MidiInterfaceError
 impl From<pm::types::Error> for MidiInterfaceError {
     fn from(value: pm::Error) -> Self {
         match value {
@@ -27,6 +33,7 @@ impl From<pm::types::Error> for MidiInterfaceError {
     }
 }
 
+/// Conversion traits for types in the midilib module
 impl TryFrom<DeviceInfo> for pm::DeviceInfo {
     type Error = MidiInterfaceError;
     fn try_from(value: DeviceInfo) -> Result<Self, Self::Error> {
@@ -92,6 +99,7 @@ impl From<LaunchMessage> for MidiEvent {
     }
 }
 
+/// Implementation of the Input trait (required for LaunchDevice)
 impl midi::Input for InputPort<'_> {
     fn poll(&self) -> Result<bool, MidiInterfaceError> {
         Ok(self.poll()?)
@@ -112,6 +120,7 @@ impl midi::Input for InputPort<'_> {
     }
 }
 
+/// Implementation of the Output trait (required for LaunchDevice)
 impl midi::Output for OutputPort<'_> {
     fn write_message(&mut self, msg: LaunchMessage) -> Result<(), MidiInterfaceError> {
         Ok(self.write_message(MidiMessage::from(msg))?)
@@ -122,6 +131,7 @@ impl midi::Output for OutputPort<'_> {
     }
 }
 
+/// Implementation of MidiInterface trait for PortMidi
 impl<'a> midi::MidiInterface<'a> for pm::PortMidi {
     type MidiInput = InputPort<'a>;
     type MidiOutput = OutputPort<'a>;

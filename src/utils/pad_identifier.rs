@@ -4,10 +4,11 @@ This program is distributed under the terms of the
 GNU Lesser General Public License v3.0, 
 see COPYING.LESSER file for license information
 */
-use crate::help_types::MessageType;
-use crate::mat_pos::MatPos;
+use crate::utils::MessageType;
+use crate::utils::MatPos;
 use crate::LaunchMessage;
 
+/// PadIdentifier struct representing a button in appropriate midi data
 pub struct PadIdentifier {
     pub(crate) status: MessageType,
     pub(crate) key: u8,
