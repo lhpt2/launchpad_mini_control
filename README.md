@@ -50,6 +50,15 @@ fn main() {
 }
 ```
 
+## Adding another backend
+
+For adding another backend apart from Portmidi:
+
+- add library to Cargo.toml
+- implement traits in midilib.rs in own module (like in pm_impl.rs) 
+- implement types InputPort, OutputPort and MidiImpl (like in pm_impl.rs) 
+- expose module in lib.rs (see lib.rs)   
+
 ## Contributing
 
 :balloon: Thanks for your help improving the project! Just fork the project and create a pull request
