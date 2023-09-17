@@ -16,6 +16,7 @@ use crate::{midilib as midi, BUFFER_SIZE};
 use portmidi as pm;
 use portmidi::{MidiEvent, MidiMessage};
 
+/// Type aliases to be implemented for abstraction of midi backend
 pub type InputPort<'a> = portmidi::InputPort<'a>;
 pub type OutputPort<'a> = portmidi::OutputPort<'a>;
 pub type MidiImpl = portmidi::PortMidi;
