@@ -26,7 +26,7 @@ with an appropriate description, we will find a way to include the suggested cha
 
 This project is licensed under the [LGPL license].
 
-[LGPL license]: https://github.com/lhpt2/launchpad_mini_control/blob/master/COPYING.LESSER
+[LGPL license]: https://www.gnu.org/licenses/lgpl-3.0.en.html#license-text
 
 ### Contribution
 
