@@ -15,10 +15,12 @@ see COPYING.LESSER file for license information
 mod utils;
 mod launch_device;
 mod midilib;
-mod pm_impl;
 
 pub use launch_device::*;
 pub use midilib::*;
+
+/// The types and implementations in this module do have to be implemented
+mod pm_impl;
 pub use pm_impl::{MidiImpl, InputPort, OutputPort};
 pub use pm_impl::*;
 
@@ -26,6 +28,8 @@ pub use utils::Color;
 pub use utils::MatPos;
 
 pub const BUFFER_SIZE: usize = 1024;
+
+/// construct a new LaunchDevice from a midi backend context
 pub fn new_launch_device_from_midi_interface<'a>(ctx: &'a impl MidiInterface<'a, MidiInput = InputPort<'a>, MidiOutput = OutputPort<'a>>) -> LaunchDevice<InputPort, OutputPort> {
     let (in_p, out_p) = match ctx.get_in_out("Launchpad Mini MIDI 1") {
         Ok(res) => (res.0, res.1),
