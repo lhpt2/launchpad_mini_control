@@ -62,9 +62,39 @@ impl<'a> midi::MidiInterface<'a> for MidiImpl {
     type MidiInput = InputPort<'a>;
     type MidiOutput = OutputPort<'a>;
 
+    fn new(client_name: &str) -> Self {
+        let iface = match portmidi::PortMidi::new() {
+            Ok(midi) => midi,
+            Err(e) => panic!("{}", e),
+        };
+        MidiImpl { iface }
+    }
+
     fn get_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError> {
         let res = self.iface.devices()?;
         Ok(res.into_iter().map(DeviceInfo::from).collect())
+    }
+
+    fn get_input_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError> {
+        match self.iface.devices() {
+            Ok(l) => Ok(l
+                .into_iter()
+                .filter(|p| p.is_input())
+                .map(DeviceInfo::from)
+                .collect()),
+            Err(e) => Err(MidiInterfaceError::from(e)),
+        }
+    }
+
+    fn get_output_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError> {
+        match self.iface.devices() {
+            Ok(l) => Ok(l
+                .into_iter()
+                .filter(|p| p.is_output())
+                .map(DeviceInfo::from)
+                .collect()),
+            Err(e) => Err(MidiInterfaceError::from(e)),
+        }
     }
 
     fn get_input(&'a self, identifier: Identifier) -> Result<InputPort<'a>, MidiInterfaceError> {

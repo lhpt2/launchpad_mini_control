@@ -1,7 +1,7 @@
 /* Copyright (C) 2023 Lucas Haupt
 
-This program is distributed under the terms of the 
-GNU Lesser General Public License v3.0, 
+This program is distributed under the terms of the
+GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
@@ -18,8 +18,16 @@ pub trait MidiInterface<'a> {
     type MidiInput: Input + 'a;
     type MidiOutput: Output + 'a;
 
+    fn new(client_name: &str) -> Self;
+
     /// Request vector of all midi devices (returns an Error if it fails)
     fn get_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError>;
+
+    /// Request vector of all midi input devices (returns an Error if it fails)
+    fn get_input_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError>;
+
+    /// Request vector of all midi output devices (returns an Error if it fails)
+    fn get_output_devices(&self) -> Result<Vec<DeviceInfo>, MidiInterfaceError>;
 
     /// Get the input with the supplied identifier (id or name) or return Error,
     /// if no input with id/name existent or on other error
@@ -74,8 +82,10 @@ pub enum Direction {
 /// Contains info about a midi device
 #[derive(Debug)]
 pub struct DeviceInfo {
-    /// unique identifier
-    pub id: i32,
+    /// id of device as string
+    pub id: String,
+    /// (optional) client name of Device
+    pub client_name: String,
     /// name of device as string
     pub name: String,
     /// direction denoting input/output
@@ -90,6 +100,12 @@ impl DeviceInfo {
     }
 }
 
+impl Display for DeviceInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{} {}", self.client_name, self.name, self.id)
+    }
+}
+
 /// Struct for a MidiMessage for communication with Launchpad
 #[derive(Debug, Clone)]
 pub struct LaunchMessage {
@@ -100,6 +116,7 @@ pub struct LaunchMessage {
 }
 
 /// device identifier, either being a name (string) or a id (number)
+#[derive(Debug)]
 pub enum Identifier {
     String(String),
     Number(i32),
@@ -109,6 +126,15 @@ impl From<&str> for Identifier {
     fn from(value: &str) -> Self {
         let name = value.to_string();
         Identifier::String(name)
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Identifier::String(s) => write!(f, "{s}"),
+            Identifier::Number(n) => write!(f, "{n}"),
+        }
     }
 }
 
