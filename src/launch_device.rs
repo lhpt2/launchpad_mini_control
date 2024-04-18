@@ -1,14 +1,14 @@
 /* Copyright (C) 2023 Lucas Haupt
 
-This program is distributed under the terms of the 
-GNU Lesser General Public License v3.0, 
+This program is distributed under the terms of the
+GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-use crate::Color;
-use crate::MatPos;
-use crate::utils::{BufferSetting, GridMode, Key, MessageType};
 use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
+use crate::utils::{BufferSetting, GridMode, Key, MessageType};
+use crate::MatPos;
+use crate::{midilib, Color};
 use cartesian::*;
 
 /// Number of Scene Launch button column
@@ -44,10 +44,7 @@ where
     /// Create a new Connection to a Launchpad Mini Device.
     /// It takes an input and output port from a compatible midi backend (see midilib.rs),
     /// which are already the input and output port pointing to the Launchpad Mini device
-    pub fn new(
-        in_port: I,
-        out_port: O,
-    ) -> LaunchDevice<I, O> {
+    pub fn new(in_port: I, out_port: O) -> LaunchDevice<I, O> {
         LaunchDevice {
             in_port,
             out_port,
@@ -57,8 +54,9 @@ where
 
     /// Returns if messages from Launchpad are available or
     /// an MidiInterfaceError, if polling fails
-    pub fn poll(&self) -> Result<bool, MidiInterfaceError> {
-        self.in_port.poll()
+    pub fn poll(&self) -> Result<(), MidiInterfaceError> {
+        let p = self.in_port.poll();
+        p
     }
 
     /// Read a single midi message, gives an Error if action fails
@@ -311,5 +309,11 @@ where
         })?;
 
         Ok(())
+    }
+}
+
+impl<I: midilib::Input, O: midilib::Output> Drop for LaunchDevice<I, O> {
+    fn drop(&mut self) {
+        let _ = self.reset();
     }
 }
