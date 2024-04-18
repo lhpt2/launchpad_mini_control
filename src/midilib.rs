@@ -12,7 +12,6 @@ see COPYING.LESSER file for license information
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-
 /// MidiInterface adapter for different midi backends,
 /// has to comply with the Input and Output trait
 pub trait MidiInterface<'a> {
