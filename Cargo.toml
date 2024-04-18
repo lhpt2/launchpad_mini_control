@@ -16,3 +16,5 @@ keywords = ["midi", "launchpad"]
 [dependencies]
 portmidi = "0.3.0" # change if other backend favored (has to implement traits in midilib.rs)
 cartesian = "0.2.1"
+midir = "0.9.1"
+ctrlc = { version = "3.4.4", features = ["termination"] }

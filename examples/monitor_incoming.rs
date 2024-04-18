@@ -1,7 +1,9 @@
+use ctrlc;
+use launchpad_mini_control::{Color, DeviceInfo, MatPos, MidiImpl, MidiInterface};
 use std::process::exit;
-use launchpad_mini_control::{
-    Color, DeviceInfo, MatPos, MidiImpl, MidiInterface,
-};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::{Acquire, Release};
+use std::sync::Arc;
 use std::time::Duration;
 
 fn print_devices<'a>(ctx: &impl MidiInterface<'a>) {
@@ -22,8 +24,13 @@ fn print_devices<'a>(ctx: &impl MidiInterface<'a>) {
 }
 
 fn main() {
+    let term = Arc::new(AtomicBool::new(false));
+    let termsend: Arc<AtomicBool> = Arc::clone(&term);
+    let _ = ctrlc::set_handler(move || {
+        termsend.store(true, Release);
+    });
     // init midi lib and some constants
-    let midi: MidiImpl = MidiImpl::new().expect("initialization");
+    let midi: MidiImpl = MidiImpl::new("Launchpad Control");
     let mut lpad = launchpad_mini_control::new_launch_device_from_midi_interface(&midi);
 
     // DEVICE OVERVIEW
@@ -32,22 +39,24 @@ fn main() {
 
     lpad.reset().unwrap();
 
-    lpad.set_position(3_u8, 5_u8, Color::MedYellow).unwrap();
+    lpad.set_position(4_u8, 5_u8, Color::MedYellow).unwrap();
     loop {
         std::thread::sleep(Duration::from_millis(700));
-        if lpad.poll().is_ok() {
-            if let Some(buf) = lpad.read_single_msg().expect("valid read") {
-                println!("{:?}", buf);
-                let tappos = MatPos::from(buf);
-                println!("{:?}", tappos);
-                println!();
+        if let Some(buf) = lpad.read_single_msg().expect("valid read") {
+            println!("{:?}", buf);
+            let tappos = MatPos::from(buf);
+            println!("{:?}", tappos);
+            println!();
 
-                if tappos.get_as_tuple() == (3_u8, 5_u8) {
-                    lpad.blackout().unwrap();
-                    lpad.set_all(Color::Green).unwrap();
-                    exit(0);
-                }
+            if tappos.get_as_tuple() == (3_u8, 5_u8) {
+                lpad.blackout().unwrap();
+                lpad.set_all(Color::Green).unwrap();
+                exit(0);
             }
+        }
+        if term.load(Acquire) {
+            let _ = lpad.reset();
+            exit(0);
         }
     }
 }
