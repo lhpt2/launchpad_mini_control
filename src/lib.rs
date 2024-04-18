@@ -12,9 +12,9 @@ see COPYING.LESSER file for license information
 //!
 //!
 
-mod utils;
 mod launch_device;
 mod midilib;
+mod utils;
 
 pub use launch_device::*;
 pub use midilib::*;
@@ -35,7 +35,7 @@ pub fn new_launch_device_from_midi_interface<'a>(ctx: &'a impl MidiInterface<'a,
         Ok(res) => (res.0, res.1),
         Err(e) => match e {
             MidiInterfaceError::NotAnOutputDevice(_) | MidiInterfaceError::NotAnInputDevice(_) => {
-                println!("Using default device");
+                eprintln!("{}: Using default device", e);
                 (
                     ctx.get_default_input().expect("default in"),
                     ctx.get_default_output().expect("default out"),
