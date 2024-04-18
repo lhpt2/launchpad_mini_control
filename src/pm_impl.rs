@@ -21,8 +21,14 @@ pub type InputPort<'a> = portmidi::InputPort<'a>;
 
 /// Implementation of the Input trait (required for LaunchDevice)
 impl midi::Input for InputPort<'_> {
-    fn poll(&self) -> Result<bool, MidiInterfaceError> {
-        Ok(self.poll()?)
+    fn poll(&self) -> Result<(), MidiInterfaceError> {
+        match self.poll() {
+            Ok(r) => match r {
+                true => Ok(()),
+                false => Err(MidiInterfaceError::GenericBackendErr("Polling false")),
+            },
+            Err(e) => Err(e),
+        }
     }
     fn read_n(&self, count: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
         let res = self.read_n(count)?;

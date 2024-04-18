@@ -64,7 +64,7 @@ pub trait Output {
 /// Trait representing an Input compatible with LaunchDevice and MidiInterface
 pub trait Input {
     /// Poll for new messages (true if messages available)
-    fn poll(&self) -> Result<bool, MidiInterfaceError>;
+    fn poll(&self) -> Result<(), MidiInterfaceError>;
 
     /// Read n messages from input port
     fn read_n(&self, count: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError>;
