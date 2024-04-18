@@ -10,6 +10,10 @@ repository = "https://github.com/lhpt2/launchpadmini_control"
 homepage = "https://github.com/lhpt2/launchpadmini_control"
 keywords = ["midi", "launchpad"]
 
+[features]
+default = ["midir"]
+midir = []
+pm = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
