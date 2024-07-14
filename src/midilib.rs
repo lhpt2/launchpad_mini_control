@@ -9,6 +9,8 @@ see COPYING.LESSER file for license information
 //! This is the trait to be implemented by the Midi backend
 //! to be supported by the library (adaptor pattern)
 
+use crate::utils::MessageType;
+use crate::{Color, MatPos};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -106,16 +108,24 @@ impl Display for DeviceInfo {
     }
 }
 
-/// Struct for a MidiMessage for communication with Launchpad
-#[derive(Debug, Clone)]
-pub struct LaunchMessage {
-    /// status byte (either control message 0x, )
-    pub status: u8,
-    pub data1: u8,
-    pub data2: u8,
+mod conversions {
+    use crate::MatPos;
+
+    pub fn to_pitch_byte(col: u8, row: u8) -> u8 {
+        if row > 7 {
+            0x68 + col
+        } else {
+            (0x10 * row) + col
+        }
+    }
+    pub fn to_matpos(pitch: u8) -> MatPos {
+        MatPos::from(pitch)
+    }
 }
 
-/// device identifier, either being a name (string) or a id (number)
+
+
+/// device identifier, either being a name (string) or an id (number)
 #[derive(Debug)]
 pub enum Identifier {
     String(String),

@@ -3,8 +3,7 @@
 //! modul with helper types to facilitate ease of use of library
 //!
 mod mat_pos;
-mod misc;
-mod pad_identifier;
+mod launchpad;
 
 pub use self::mat_pos::*;
 pub use self::misc::*;

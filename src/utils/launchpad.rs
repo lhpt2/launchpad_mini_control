@@ -4,8 +4,28 @@ This program is distributed under the terms of the
 GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
-use crate::utils::PadIdentifier;
-use crate::MatPos;
+use crate::MidiInterfaceError;
+
+#[derive(Debug, Clone)]
+pub struct LaunchMessage {
+    pub status: MessageType,
+    pub col: u8,
+    pub row: u8,
+    pub color: Color,
+}
+
+impl From<MidiMessage> for LaunchMessage {
+    fn from(value: MidiMessage) -> Self {
+        let pos = MatPos::from(&value);
+        let mtype = MessageType::try_from(&value.status).expect("no valid status byte");
+        LaunchMessage {
+            status: mtype,
+            col: pos.col,
+            row: pos.row,
+            color: Color::from(value.data2),
+        }
+    }
+}
 
 /// Color gradient array, trying to sort all colors on a spectrum
 const COLOR_GRADIENT: [Color; 16] = [
@@ -27,14 +47,27 @@ const COLOR_GRADIENT: [Color; 16] = [
     Color::DimRed,
 ];
 
-/// Message type of a message for the Launchpad, either
+/// Message type of message for the Launchpad, either
 /// On (Light On, Button pressed), Off (Light Off, Button released), or
 /// Ctl (Control msg, one of the round buttons in first row has been pressed)
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum MessageType {
     Off = 0x80,
     On = 0x90,
     Ctl = 0xb0,
+}
+
+impl TryFrom<u8> for MessageType {
+    type Error = MidiInterfaceError;
+
+    fn try_from(value: u8) -> Result<Self, MidiInterfaceError> {
+        match value {
+            0x80 => Ok(MessageType::Off),
+            0x90 => Ok(MessageType::On),
+            0xb0 => Ok(MessageType::Ctl),
+            _ => Err(MidiInterfaceError::Invalid("Invalid".to_string())),
+        }
+    }
 }
 
 /// All colors the Launchpad is able to display
@@ -56,6 +89,29 @@ pub enum Color {
     Red = 0x03,
     MedRed = 0x02,
     DimRed = 0x01,
+}
+
+impl From<u8> for Color {
+    fn from(value: u8) -> Self {
+        match value {
+            x if x == Color::DimGreen as u8 => Color::DimGreen,
+            x if x == Color::MedGreen as u8 => Color::MedGreen,
+            x if x == Color::Green as u8 => Color::Green,
+            x if x == Color::Grellow as u8 => Color::Grellow,
+            x if x == Color::DimGrellow as u8 => Color::DimGrellow,
+            x if x == Color::Yellow as u8 => Color::Yellow,
+            x if x == Color::MedYellow as u8 => Color::MedYellow,
+            x if x == Color::DimYellow as u8 => Color::DimYellow,
+            x if x == Color::YellOrange as u8 => Color::YellOrange,
+            x if x == Color::Orange as u8 => Color::Orange,
+            x if x == Color::DimORedange as u8 => Color::DimORedange,
+            x if x == Color::ORedange as u8 => Color::ORedange,
+            x if x == Color::Red as u8 => Color::Red,
+            x if x == Color::MedRed as u8 => Color::MedRed,
+            x if x == Color::DimRed as u8 => Color::DimRed,
+            _ => Color::Black,
+        }
+    }
 }
 
 /// Buffer modes for the Launchpad.
@@ -80,15 +136,4 @@ pub enum BufferSetting {
 pub enum GridMode {
     XY = 0x01,
     DrumRack = 0x02,
-}
-
-pub(crate) type Key = u8;
-impl From<MatPos> for Key {
-    fn from(pos: MatPos) -> Self {
-        if pos.row > 7 {
-            121 as Key
-        } else {
-            PadIdentifier::from(pos).key as Key
-        }
-    }
 }

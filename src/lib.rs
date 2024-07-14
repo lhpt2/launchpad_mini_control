@@ -15,6 +15,7 @@ see COPYING.LESSER file for license information
 mod launch_device;
 mod midilib;
 mod utils;
+pub use utils::MessageType;
 
 pub use launch_device::*;
 pub use midilib::*;
