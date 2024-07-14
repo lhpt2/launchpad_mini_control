@@ -5,8 +5,8 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-use crate::utils::MessageType;
-use crate::utils::midi::MidiMessage;
+use crate::utils::midi::{MidiEvent, MidiMessage};
+use crate::utils::{conversions, MessageType};
 
 /// Struct representing a position on the Launchpad matrix with various type conversions
 #[derive(Debug)]
@@ -23,19 +23,15 @@ impl MatPos {
     }
 
     pub fn get_msg_type(&self) -> MessageType {
-       return if self.row > 7 {
-          MessageType::Ctl
-       } else {
-          MessageType::Off
-       }
+        if self.row > 7 {
+            MessageType::Ctl
+        } else {
+            MessageType::Off
+        }
     }
 
     pub fn to_pitch(&self) -> u8 {
-        return if self.row > 7 {
-            0x68 + self.col
-        } else {
-            (0x10 * self.row) + self.col
-        }
+        conversions::to_pitch_byte(self.col, self.row)
     }
 
     pub fn get_midi_msg(self) -> MidiMessage {
@@ -47,25 +43,37 @@ impl MatPos {
     }
 }
 
-impl From<MidiMessage> for MatPos {
-    fn from(msg: MidiMessage) -> Self {
-        if msg.status == MessageType::Ctl as u8 {
+impl From<&MidiMessage> for MatPos {
+    fn from(msg: &MidiMessage) -> Self {
+        MatPos::from(MidiEvent::from(msg))
+    }
+}
+
+impl From<&MidiEvent> for MatPos {
+    fn from(ev: &MidiEvent) -> Self {
+        if ev.status == MessageType::Ctl as u8 {
             MatPos {
                 row: 8,
-                col: msg.pitch % 0x68,
+                col: ev.pitch % 0x68,
             }
         } else {
             MatPos {
-                row: msg.pitch / 0x10,
-                col: msg.pitch % 0x10,
+                row: ev.pitch / 0x10,
+                col: ev.pitch % 0x10,
             }
         }
     }
 }
 
+impl From<MidiEvent> for MatPos {
+    fn from(ev: MidiEvent) -> Self {
+        MatPos::from(&ev)
+    }
+}
+
 impl From<u8> for MatPos {
     fn from(pitch: u8) -> Self {
-        if pitch >= 0x68 && pitch <= 0x6F {
+        if (0x68..=0x6F).contains(&pitch){
             MatPos {
                 row: 8,
                 col: pitch % 0x68,

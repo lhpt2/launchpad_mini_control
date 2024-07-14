@@ -1,3 +1,6 @@
+use crate::utils::{conversions, LaunchMessage};
+use crate::{MatPos, MessageType};
+
 /// Struct for a typical MidiMessage
 #[derive(PartialEq, Debug)]
 pub struct MidiMessage {
@@ -14,11 +17,11 @@ impl MidiMessage {
     }
 
     pub fn get_position(&self) -> MatPos {
-        MatPos::from(&self)
+        MatPos::from(self)
     }
 
     pub fn get_launchmsg(&self) -> LaunchMessage {
-        LaunchMessage::from(&self)
+        LaunchMessage::from(self)
     }
 }
 
@@ -52,7 +55,7 @@ impl From<&MidiEvent> for MidiMessage {
 
 impl From<&[u8]> for MidiMessage {
     fn from(value: &[u8]) -> Self {
-        MidiMessage{
+        MidiMessage {
             status: value[0],
             pitch: value[1],
             velocity: value[2],
@@ -71,16 +74,16 @@ impl From<[u8; 3]> for MidiMessage {
 }
 
 /// Struct for a typical MidiEvent
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct MidiEvent {
     // time information as u64 timestamp
-    timestamp: u64,
+    pub(crate) timestamp: u64,
     // status byte (NoteOn, NoteOff, CC, SysEx)
-    status: u8,
+    pub(crate) status: u8,
     // pitch byte indicating pitch or similar
-    pitch: u8,
+    pub(crate) pitch: u8,
     // velocity byte indicating intensity or similar
-    velocity: u8,
+    pub(crate) velocity: u8,
 }
 impl MidiEvent {
     pub fn new(timestamp: u64, status: u8, pitch: u8, velocity: u8) -> MidiEvent {
@@ -95,21 +98,50 @@ impl MidiEvent {
     fn get_midi_message(&self) -> MidiMessage {
         MidiMessage::from(self)
     }
+
+    fn get_launch_message(&self) -> LaunchMessage {
+        LaunchMessage::from(self)
+    }
 }
 
 impl From<&[u8]> for MidiEvent {
     fn from(data: &[u8]) -> Self {
         let mut res: [u8; 3] = [0, 0, 0];
-
-        for i in 0..data.len() {
-            res[i] = data[i];
-        }
+        res[..data.len()].copy_from_slice(data);
 
         MidiEvent {
             timestamp: 0,
             status: res[0],
             pitch: res[1],
             velocity: res[2],
+        }
+    }
+}
+
+impl From<MidiMessage> for MidiEvent {
+    fn from(msg: MidiMessage) -> Self {
+        MidiEvent::from(&msg)
+    }
+}
+
+impl From<&MidiMessage> for MidiEvent {
+    fn from(msg: &MidiMessage) -> Self {
+        MidiEvent {
+            timestamp: 0,
+            status: msg.status,
+            pitch: msg.pitch,
+            velocity: msg.velocity,
+        }
+    }
+}
+
+impl From<&LaunchMessage> for MidiEvent {
+    fn from(lmsg: &LaunchMessage) -> Self {
+        MidiEvent {
+           timestamp: 0,
+           status: lmsg.status.clone() as u8,
+           pitch: conversions::to_pitch_byte(lmsg.col, lmsg.row),
+           velocity: lmsg.color.into(),
         }
     }
 }

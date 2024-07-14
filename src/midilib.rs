@@ -9,8 +9,7 @@ see COPYING.LESSER file for license information
 //! This is the trait to be implemented by the Midi backend
 //! to be supported by the library (adaptor pattern)
 
-use crate::utils::MessageType;
-use crate::{Color, MatPos};
+use crate::utils::midi::MidiEvent;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -57,10 +56,10 @@ pub trait MidiInterface<'a> {
 /// Trait representing an Output compatible with LaunchDevice and MidiInterface
 pub trait Output {
     /// Write one messages to output port
-    fn write_message(&mut self, msg: MidiMessage) -> Result<(), MidiInterfaceError>;
+    fn write_message(&mut self, msg: MidiEvent) -> Result<(), MidiInterfaceError>;
 
     /// Write multiple messages to output port
-    fn write_messages(&mut self, msg: Vec<MidiMessage>) -> Result<(), MidiInterfaceError>;
+    fn write_messages(&mut self, msg: Vec<MidiEvent>) -> Result<(), MidiInterfaceError>;
 }
 
 /// Trait representing an Input compatible with LaunchDevice and MidiInterface
@@ -69,7 +68,7 @@ pub trait Input {
     fn poll(&self) -> Result<(), MidiInterfaceError>;
 
     /// Read n messages from input port
-    fn read_n(&self, count: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError>;
+    fn read_n(&self, count: usize) -> Result<Option<Vec<MidiEvent>>, MidiInterfaceError>;
 }
 
 /// Direction being either input or output device type
@@ -107,23 +106,6 @@ impl Display for DeviceInfo {
         write!(f, "{}:{} {}", self.client_name, self.name, self.id)
     }
 }
-
-mod conversions {
-    use crate::MatPos;
-
-    pub fn to_pitch_byte(col: u8, row: u8) -> u8 {
-        if row > 7 {
-            0x68 + col
-        } else {
-            (0x10 * row) + col
-        }
-    }
-    pub fn to_matpos(pitch: u8) -> MatPos {
-        MatPos::from(pitch)
-    }
-}
-
-
 
 /// device identifier, either being a name (string) or an id (number)
 #[derive(Debug)]

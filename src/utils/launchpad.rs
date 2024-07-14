@@ -4,9 +4,9 @@ This program is distributed under the terms of the
 GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
-use crate::MidiInterfaceError;
-use crate::utils::midi::MidiMessage;
+use crate::utils::midi::{MidiEvent, MidiMessage};
 use crate::utils::MatPos;
+use crate::MidiInterfaceError;
 
 #[derive(Debug, Clone)]
 pub struct LaunchMessage {
@@ -17,14 +17,59 @@ pub struct LaunchMessage {
 }
 
 impl From<MidiMessage> for LaunchMessage {
-    fn from(value: MidiMessage) -> Self {
-        let pos = MatPos::from(&value);
-        let mtype = MessageType::try_from(&value.status).expect("no valid status byte");
+    fn from(msg: MidiMessage) -> Self {
+       LaunchMessage::from(&msg)
+    }
+}
+
+impl From<&MidiMessage> for LaunchMessage {
+    fn from(value: &MidiMessage) -> Self {
+        let pos = MatPos::from(value);
+        let mtype = MessageType::try_from(value.status).expect("no valid status byte");
         LaunchMessage {
             status: mtype,
             col: pos.col,
             row: pos.row,
             color: Color::from(value.velocity),
+        }
+    }
+}
+
+impl From<MidiEvent> for LaunchMessage {
+    fn from(ev: MidiEvent) -> Self {
+        LaunchMessage::from(&ev)
+    }
+}
+
+impl From<&MidiEvent> for LaunchMessage {
+    fn from(ev: &MidiEvent) -> Self {
+       let pos: MatPos = MatPos::from(ev);
+       let mtype = MessageType::try_from(ev.status).expect("No valid status byte");
+       LaunchMessage {
+            status: mtype,
+            col: pos.col,
+            row: pos.row,
+            color: Color::from(ev.velocity)
+       }
+    }
+}
+
+impl From<LaunchMessage> for MidiEvent {
+    fn from(msg: LaunchMessage) -> Self {
+        if msg.status == MessageType::Ctl {
+            MidiEvent {
+                timestamp: 0,
+                status: msg.status as u8,
+                pitch: 0x68 + msg.col,
+                velocity: msg.color as u8,
+            }
+        } else {
+            MidiEvent {
+                timestamp: 0,
+                status: msg.status as u8,
+                pitch: (0x10 * msg.row) + msg.col,
+                velocity: msg.color as u8,
+            }
         }
     }
 }
@@ -113,6 +158,11 @@ impl From<u8> for Color {
             x if x == Color::DimRed as u8 => Color::DimRed,
             _ => Color::Black,
         }
+    }
+}
+impl From<Color> for u8 {
+    fn from(color: Color) -> Self {
+       color as u8
     }
 }
 

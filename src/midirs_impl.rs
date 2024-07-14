@@ -12,26 +12,26 @@ see COPYING.LESSER file for license information
 
 use crate::midilib::MidiInterfaceError;
 use crate::midilib::{DeviceInfo, Direction, Identifier};
-use crate::utils::LaunchMessage;
 use crate::{midilib as midi, BUFFER_SIZE};
 use midir as md;
-use midir::{MidiInputPort, MidiOutputConnection, MidiOutputPort};
-use std::fmt::format;
+use midir::{MidiInputPort, MidiOutputPort};
 use std::panic;
 use std::sync::mpsc;
 use std::sync::mpsc::TryRecvError;
+use crate::utils::midi::MidiEvent;
 
 /// Type aliases to be implemented for abstraction of midi backend
 pub struct InputPort {
-    port: Option<md::MidiInputConnection<mpsc::SyncSender<LaunchMessage>>>,
-    queue: mpsc::Receiver<LaunchMessage>,
+    port: Option<md::MidiInputConnection<mpsc::SyncSender<MidiEvent>>>,
+    queue: mpsc::Receiver<MidiEvent>,
 }
 impl InputPort {
-    fn callback(bytes: &[u8], sender: &mut mpsc::SyncSender<LaunchMessage>) {
-        match sender.send(LaunchMessage {
+    fn callback(timestamp: u64, bytes: &[u8], sender: &mut mpsc::SyncSender<MidiEvent>) {
+        match sender.send(MidiEvent {
+            timestamp,
             status: bytes[0],
-            data1: bytes[1],
-            data2: bytes[2],
+            pitch: bytes[1],
+            velocity: bytes[2],
         }) {
             Ok(_) => {}
             Err(e) => eprintln!("Receiver not able to receive data: {}", e),
@@ -69,7 +69,7 @@ impl InputPort {
         if let Some(p) = self.port.take() {
             p.close();
         }
-        let (sender, receiver) = mpsc::sync_channel::<LaunchMessage>(buffer_size);
+        let (sender, receiver) = mpsc::sync_channel::<MidiEvent>(buffer_size);
         self.queue = receiver;
         self.port = Some(
             md::MidiInput::new(client_name)
@@ -77,7 +77,7 @@ impl InputPort {
                 .connect(
                     &port,
                     conn_name,
-                    |_, bytes, sender| Self::callback(bytes, sender),
+                    Self::callback,
                     sender,
                 )
                 .unwrap(),
@@ -104,13 +104,13 @@ impl InputPort {
         conn_name: &str,
         buffer_size: usize,
     ) -> Self {
-        let (sender, receiver) = mpsc::sync_channel::<LaunchMessage>(buffer_size);
+        let (sender, receiver) = mpsc::sync_channel::<MidiEvent>(buffer_size);
         let midi_in = md::MidiInput::new(client_name)
             .expect("Input Initialization")
             .connect(
                 port,
                 conn_name,
-                |_, bytes, sender| Self::callback(bytes, sender),
+                Self::callback,
                 sender,
             )
             .expect("Input connection");
@@ -194,8 +194,8 @@ impl midi::Input for InputPort {
     fn poll(&self) -> Result<(), MidiInterfaceError> {
         Ok(())
     }
-    fn read_n(&self, count: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
-        let mut res = Vec::<LaunchMessage>::new();
+    fn read_n(&self, count: usize) -> Result<Option<Vec<MidiEvent>>, MidiInterfaceError> {
+        let mut res = Vec::<MidiEvent>::new();
         for _ in 0..count {
             match self.queue.try_recv() {
                 Ok(m) => {
@@ -219,25 +219,25 @@ impl midi::Input for InputPort {
 
 /// Implementation of the Output trait (required for LaunchDevice)
 impl midi::Output for OutputPort {
-    fn write_message(&mut self, msg: LaunchMessage) -> Result<(), MidiInterfaceError> {
+    fn write_message(&mut self, msg: MidiEvent) -> Result<(), MidiInterfaceError> {
         match self
             .port
             .as_mut()
             .unwrap()
-            .send(&[msg.status, msg.data1, msg.data2])
+            .send(&[msg.status, msg.pitch, msg.velocity])
         {
             Ok(_) => Ok(()),
             Err(e) => Err(MidiInterfaceError::from(e)),
         }
     }
 
-    fn write_messages(&mut self, msg: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError> {
+    fn write_messages(&mut self, msg: Vec<MidiEvent>) -> Result<(), MidiInterfaceError> {
         msg.into_iter().for_each(|m| {
             if let Err(e) = self
                 .port
                 .as_mut()
                 .unwrap()
-                .send(&[m.status, m.data1, m.data2])
+                .send(&[m.status, m.pitch, m.velocity])
             {
                 eprintln!("Send Error: {e}")
             }

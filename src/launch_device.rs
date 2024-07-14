@@ -5,12 +5,12 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-use crate::midilib::{Input, MidiInterfaceError, Output};
-use crate::utils::launchpad::{BufferSetting, GridMode, MessageType, LaunchMessage, Color};
-use crate::utils::midi::{MidiMessage};
-use crate::midilib::MatPos;
 use cartesian::*;
-use crate::midilib;
+
+use crate::midilib::{Input, MidiInterfaceError, Output};
+use crate::utils::conversions;
+use crate::utils::launchpad::{BufferSetting, Color, GridMode, LaunchMessage, MessageType};
+use crate::utils::midi::MidiEvent;
 
 /// Number of Scene Launch button column
 const SCENE_LAUNCH_COL: usize = 8;
@@ -60,14 +60,14 @@ where
     }
 
     /// Read a single midi message, gives an Error if action fails
-    pub fn read_single_msg(&self) -> Result<Option<LaunchMessage>, MidiInterfaceError> {
+    pub fn read_single_msg(&self) -> Result<Option<MidiEvent>, MidiInterfaceError> {
         let opt = self.in_port.read_n(1)?;
         match opt {
             None => Ok(None),
             Some(msg) => match msg.first() {
                 None => Ok(None),
                 Some(m) => {
-                    let res: LaunchMessage = (*m).clone();
+                    let res: MidiEvent = (*m).clone();
                     Ok(Some(res))
                 }
             },
@@ -75,7 +75,7 @@ where
     }
 
     /// Read a number of midi messages, return Error if action fails
-    pub fn read_n_msgs(&self, n: usize) -> Result<Option<Vec<LaunchMessage>>, MidiInterfaceError> {
+    pub fn read_n_msgs(&self, n: usize) -> Result<Option<Vec<MidiEvent>>, MidiInterfaceError> {
         self.in_port.read_n(n)
     }
 
@@ -92,12 +92,11 @@ where
             mtype = MessageType::On as u8;
         }
 
-        let pos = MatPos::from(key);
-        self.out_port.write_message(LaunchMessage {
+        self.out_port.write_message(MidiEvent {
+            timestamp: 0,
             status: mtype,
-            row: key,
-            col: key,
-            color: Color::from(vel),
+            pitch: key,
+            velocity: vel,
         })?;
 
         Ok(())
@@ -105,13 +104,15 @@ where
 
     /// Send multiple messages to the Launchpad (and return an Error, if action fails)
     pub fn send_messages(&mut self, msgs: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError> {
+        let msgs: Vec<MidiEvent> = msgs.iter().map(MidiEvent::from).collect();
         self.out_port.write_messages(msgs)?;
         Ok(())
     }
 
     /// Send a control message to the Launchpad (and return an Error, if action fails)
     pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) -> Result<(), MidiInterfaceError> {
-        self.out_port.write_message(MidiMessage {
+        self.out_port.write_message(MidiEvent {
+            timestamp: 0,
             status: 0xb0,
             pitch: data1,
             velocity: data2,
@@ -148,32 +149,28 @@ where
         if row > 7 {
             status = MessageType::Ctl;
         }
-        self.out_port
-            .write_message(MidiMessage::from(LaunchMessage {
-                status,
-                col,
-                row,
-                color,
-            }))?;
+        self.out_port.write_message(MidiEvent::from(LaunchMessage {
+            status,
+            col,
+            row,
+            color,
+        }))?;
         Ok(())
     }
 
     /// Set all buttons to one color
     /// Returns Error, if action fails
     pub fn set_all(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
-        let mut msg: Vec<LaunchMessage> =
-            Vec::with_capacity(MAX_PAD_COLSROWS * MAX_PAD_COLSROWS);
         for (x, y) in cartesian!(0..8, 0..9) {
             //self.send_note_msg(true, Key::from(MatPos::new(x, y)), color.into());
-            msg.push(LaunchMessage {
-                status: MessageType::On,
-                row: y,
-                col: x,
-                color,
-            });
+            self.out_port.write_message(MidiEvent {
+                timestamp: 0,
+                status: MessageType::On as u8,
+                pitch: conversions::to_pitch_byte(x, y),
+                velocity: color as u8,
+            })?;
         }
 
-        self.out_port.write_messages(msg)?;
         Ok(())
     }
 
@@ -193,35 +190,32 @@ where
     /// Takes a 8x9 (row, col) matrix of Colors and sets the lights according to the matrix
     /// Returns Error, if action fails
     pub fn set_matrix(&mut self, mat: &[[Color; 9]; 8]) -> Result<(), MidiInterfaceError> {
-        let mut res: Vec<MidiMessage> = Vec::with_capacity(mat.len());
-
         for (i, parent) in mat.iter().enumerate() {
             for (j, elem) in parent.iter().enumerate() {
-                res.push(MidiMessage {
+                self.out_port.write_message(MidiEvent {
+                    timestamp: 0,
                     status: 0x90,
-                    pitch: Key::from(MatPos::new(i as u8, j as u8)),
+                    pitch: conversions::to_pitch_byte(i as u8, j as u8),
                     velocity: *elem as u8,
-                });
+                })?;
             }
         }
 
-        self.out_port.write_messages(res)?;
         Ok(())
     }
 
     /// Set lights of the first row on the Launchpad (round control buttons)
     /// Returns Error, if action fails
     pub fn set_first_row(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
-        let mut msg: Vec<MidiMessage> = Vec::with_capacity(8);
         for i in 0..8 {
-            msg.push(MidiMessage {
+            self.out_port.write_message(MidiEvent {
+                timestamp: 0,
                 status: 0xb0,
                 pitch: 0x68 + i,
-                velocity: color as u8,
-            });
+                velocity: color.into(),
+            })?;
         }
 
-        self.out_port.write_messages(msg)?;
         Ok(())
     }
 
@@ -292,17 +286,8 @@ where
         let mut numerator = numerator;
         let mut denominator = denominator;
 
-        if numerator > 16 {
-            numerator = 16;
-        } else if numerator < 1 {
-            numerator = 1;
-        }
-
-        if denominator > 18 {
-            denominator = 18;
-        } else if denominator < 3 {
-            denominator = 3;
-        }
+        numerator = numerator.clamp(1, 16);
+        denominator = denominator.clamp(3, 18);
 
         let mut data1: u8 = 0x1f;
         let mut data2: u8 = 0x10 * (numerator - 9) + (denominator - 3);
@@ -312,7 +297,8 @@ where
             data2 = 0x10 * (numerator - 1) + (denominator - 3);
         }
 
-        self.out_port.write_message(MidiMessage {
+        self.out_port.write_message(MidiEvent {
+            timestamp: 0,
             status: 0xb0,
             pitch: data1,
             velocity: data2,
