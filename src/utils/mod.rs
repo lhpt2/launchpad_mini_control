@@ -3,8 +3,8 @@
 //! modul with helper types to facilitate ease of use of library
 //!
 mod mat_pos;
-mod launchpad;
+pub mod launchpad;
+pub mod midi;
 
 pub use self::mat_pos::*;
-pub use self::misc::*;
-pub use self::pad_identifier::*;
+pub use self::launchpad::*;

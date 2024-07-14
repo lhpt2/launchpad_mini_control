@@ -5,11 +5,12 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 
-use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
-use crate::utils::{BufferSetting, GridMode, Key, MessageType};
-use crate::{midilib, Color};
-use crate::{InputPort, LaunchMessageColor, MatPos, MidiMessage};
+use crate::midilib::{Input, MidiInterfaceError, Output};
+use crate::utils::launchpad::{BufferSetting, GridMode, MessageType, LaunchMessage, Color};
+use crate::utils::midi::{MidiMessage};
+use crate::midilib::MatPos;
 use cartesian::*;
+use crate::midilib;
 
 /// Number of Scene Launch button column
 const SCENE_LAUNCH_COL: usize = 8;
@@ -110,10 +111,10 @@ where
 
     /// Send a control message to the Launchpad (and return an Error, if action fails)
     pub fn send_ctl_msg(&mut self, data1: u8, data2: u8) -> Result<(), MidiInterfaceError> {
-        self.out_port.write_message(LaunchMessage {
+        self.out_port.write_message(MidiMessage {
             status: 0xb0,
-            data1,
-            data2,
+            pitch: data1,
+            velocity: data2,
         })?;
         Ok(())
     }
@@ -160,11 +161,11 @@ where
     /// Set all buttons to one color
     /// Returns Error, if action fails
     pub fn set_all(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
-        let mut msg: Vec<LaunchMessageColor> =
+        let mut msg: Vec<LaunchMessage> =
             Vec::with_capacity(MAX_PAD_COLSROWS * MAX_PAD_COLSROWS);
         for (x, y) in cartesian!(0..8, 0..9) {
             //self.send_note_msg(true, Key::from(MatPos::new(x, y)), color.into());
-            msg.push(LaunchMessageColor {
+            msg.push(LaunchMessage {
                 status: MessageType::On,
                 row: y,
                 col: x,
@@ -192,14 +193,14 @@ where
     /// Takes a 8x9 (row, col) matrix of Colors and sets the lights according to the matrix
     /// Returns Error, if action fails
     pub fn set_matrix(&mut self, mat: &[[Color; 9]; 8]) -> Result<(), MidiInterfaceError> {
-        let mut res: Vec<LaunchMessage> = Vec::with_capacity(mat.len());
+        let mut res: Vec<MidiMessage> = Vec::with_capacity(mat.len());
 
         for (i, parent) in mat.iter().enumerate() {
             for (j, elem) in parent.iter().enumerate() {
-                res.push(LaunchMessage {
+                res.push(MidiMessage {
                     status: 0x90,
-                    data1: Key::from(MatPos::new(i as u8, j as u8)),
-                    data2: *elem as u8,
+                    pitch: Key::from(MatPos::new(i as u8, j as u8)),
+                    velocity: *elem as u8,
                 });
             }
         }
@@ -211,12 +212,12 @@ where
     /// Set lights of the first row on the Launchpad (round control buttons)
     /// Returns Error, if action fails
     pub fn set_first_row(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
-        let mut msg: Vec<LaunchMessage> = Vec::with_capacity(8);
+        let mut msg: Vec<MidiMessage> = Vec::with_capacity(8);
         for i in 0..8 {
-            msg.push(LaunchMessage {
+            msg.push(MidiMessage {
                 status: 0xb0,
-                data1: 0x68 + i,
-                data2: color as u8,
+                pitch: 0x68 + i,
+                velocity: color as u8,
             });
         }
 
@@ -311,17 +312,17 @@ where
             data2 = 0x10 * (numerator - 1) + (denominator - 3);
         }
 
-        self.out_port.write_message(LaunchMessage {
+        self.out_port.write_message(MidiMessage {
             status: 0xb0,
-            data1,
-            data2,
+            pitch: data1,
+            velocity: data2,
         })?;
 
         Ok(())
     }
 }
 
-impl<I: midilib::Input, O: midilib::Output> Drop for LaunchDeviceTemplate<I, O> {
+impl<I: Input, O: Output> Drop for LaunchDeviceTemplate<I, O> {
     fn drop(&mut self) {
         let _ = self.reset();
     }

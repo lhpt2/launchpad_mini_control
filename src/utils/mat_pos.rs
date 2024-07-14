@@ -6,7 +6,7 @@ see COPYING.LESSER file for license information
 */
 
 use crate::utils::MessageType;
-use crate::MidiMessage;
+use crate::utils::midi::MidiMessage;
 
 /// Struct representing a position on the Launchpad matrix with various type conversions
 #[derive(Debug)]
@@ -28,12 +28,12 @@ impl From<MidiMessage> for MatPos {
         if msg.status == MessageType::Ctl as u8 {
             MatPos {
                 row: 8,
-                col: msg.data1 % 0x68,
+                col: msg.pitch % 0x68,
             }
         } else {
             MatPos {
-                row: msg.data1 / 0x10,
-                col: msg.data1 % 0x10,
+                row: msg.pitch / 0x10,
+                col: msg.pitch % 0x10,
             }
         }
     }

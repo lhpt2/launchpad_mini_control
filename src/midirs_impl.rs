@@ -11,7 +11,8 @@ see COPYING.LESSER file for license information
 //! Implementation of the midilib traits for Portmidi library
 
 use crate::midilib::MidiInterfaceError;
-use crate::midilib::{DeviceInfo, Direction, Identifier, LaunchMessage};
+use crate::midilib::{DeviceInfo, Direction, Identifier};
+use crate::utils::LaunchMessage;
 use crate::{midilib as midi, BUFFER_SIZE};
 use midir as md;
 use midir::{MidiInputPort, MidiOutputConnection, MidiOutputPort};

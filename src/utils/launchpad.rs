@@ -5,6 +5,8 @@ GNU Lesser General Public License v3.0,
 see COPYING.LESSER file for license information
 */
 use crate::MidiInterfaceError;
+use crate::utils::midi::MidiMessage;
+use crate::utils::MatPos;
 
 #[derive(Debug, Clone)]
 pub struct LaunchMessage {
@@ -22,7 +24,7 @@ impl From<MidiMessage> for LaunchMessage {
             status: mtype,
             col: pos.col,
             row: pos.row,
-            color: Color::from(value.data2),
+            color: Color::from(value.velocity),
         }
     }
 }
