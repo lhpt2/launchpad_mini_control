@@ -21,6 +21,30 @@ impl MatPos {
     pub fn get_as_tuple(self) -> (u8, u8) {
         (self.row, self.col)
     }
+
+    pub fn get_msg_type(&self) -> MessageType {
+       return if self.row > 7 {
+          MessageType::Ctl
+       } else {
+          MessageType::Off
+       }
+    }
+
+    pub fn to_pitch(&self) -> u8 {
+        return if self.row > 7 {
+            0x68 + self.col
+        } else {
+            (0x10 * self.row) + self.col
+        }
+    }
+
+    pub fn get_midi_msg(self) -> MidiMessage {
+        MidiMessage {
+            status: self.get_msg_type() as u8,
+            pitch: self.to_pitch(),
+            velocity: 0,
+        }
+    }
 }
 
 impl From<MidiMessage> for MatPos {
