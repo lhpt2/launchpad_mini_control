@@ -7,8 +7,8 @@ see COPYING.LESSER file for license information
 
 use crate::midilib::{Input, LaunchMessage, MidiInterfaceError, Output};
 use crate::utils::{BufferSetting, GridMode, Key, MessageType};
-use crate::MatPos;
 use crate::{midilib, Color};
+use crate::{InputPort, LaunchMessageColor, MatPos, MidiMessage};
 use cartesian::*;
 
 /// Number of Scene Launch button column
@@ -31,12 +31,12 @@ const SCENE_BUTTON_COL: [u8; 8] = [0x08, 0x18, 0x28, 0x38, 0x48, 0x58, 0x68, 0x7
 const STATUS_CONTROL_BUTTON_ROW: [u8; 8] = [0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F];
 
 /// This is the main struct for communicating with a LaunchpadMini
-pub struct LaunchDevice<I: Input, O: Output> {
+pub struct LaunchDeviceTemplate<I: Input, O: Output> {
     in_port: I,
     out_port: O,
     buffer_setting: u8,
 }
-impl<'a, I, O> LaunchDevice<I, O>
+impl<'a, I, O> LaunchDeviceTemplate<I, O>
 where
     I: Input + 'a,
     O: Output + 'a,
@@ -44,8 +44,8 @@ where
     /// Create a new Connection to a Launchpad Mini Device.
     /// It takes an input and output port from a compatible midi backend (see midilib.rs),
     /// which are already the input and output port pointing to the Launchpad Mini device
-    pub fn new(in_port: I, out_port: O) -> LaunchDevice<I, O> {
-        LaunchDevice {
+    pub fn new(in_port: I, out_port: O) -> LaunchDeviceTemplate<I, O> {
+        LaunchDeviceTemplate {
             in_port,
             out_port,
             buffer_setting: 0,
@@ -55,8 +55,7 @@ where
     /// Returns if messages from Launchpad are available or
     /// an MidiInterfaceError, if polling fails
     pub fn poll(&self) -> Result<(), MidiInterfaceError> {
-        let p = self.in_port.poll();
-        p
+        self.in_port.poll()
     }
 
     /// Read a single midi message, gives an Error if action fails
@@ -92,10 +91,12 @@ where
             mtype = MessageType::On as u8;
         }
 
+        let pos = MatPos::from(key);
         self.out_port.write_message(LaunchMessage {
             status: mtype,
-            data1: key,
-            data2: vel,
+            row: key,
+            col: key,
+            color: Color::from(vel),
         })?;
 
         Ok(())
@@ -142,24 +143,32 @@ where
         col: u8,
         color: Color,
     ) -> Result<(), MidiInterfaceError> {
-        self.out_port.write_message(LaunchMessage {
-            status: 0x90,
-            data1: Key::from(MatPos::new(row, col)),
-            data2: color as u8,
-        })?;
+        let mut status = MessageType::On;
+        if row > 7 {
+            status = MessageType::Ctl;
+        }
+        self.out_port
+            .write_message(MidiMessage::from(LaunchMessage {
+                status,
+                col,
+                row,
+                color,
+            }))?;
         Ok(())
     }
 
     /// Set all buttons to one color
     /// Returns Error, if action fails
     pub fn set_all(&mut self, color: Color) -> Result<(), MidiInterfaceError> {
-        let mut msg: Vec<LaunchMessage> = Vec::with_capacity(MAX_PAD_COLSROWS * MAX_PAD_COLSROWS);
+        let mut msg: Vec<LaunchMessageColor> =
+            Vec::with_capacity(MAX_PAD_COLSROWS * MAX_PAD_COLSROWS);
         for (x, y) in cartesian!(0..8, 0..9) {
             //self.send_note_msg(true, Key::from(MatPos::new(x, y)), color.into());
-            msg.push(LaunchMessage {
-                status: MessageType::On as u8,
-                data1: Key::from(MatPos::new(x, y)),
-                data2: color as u8,
+            msg.push(LaunchMessageColor {
+                status: MessageType::On,
+                row: y,
+                col: x,
+                color,
             });
         }
 
@@ -312,7 +321,7 @@ where
     }
 }
 
-impl<I: midilib::Input, O: midilib::Output> Drop for LaunchDevice<I, O> {
+impl<I: midilib::Input, O: midilib::Output> Drop for LaunchDeviceTemplate<I, O> {
     fn drop(&mut self) {
         let _ = self.reset();
     }

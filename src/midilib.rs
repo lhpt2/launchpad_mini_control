@@ -57,10 +57,10 @@ pub trait MidiInterface<'a> {
 /// Trait representing an Output compatible with LaunchDevice and MidiInterface
 pub trait Output {
     /// Write one messages to output port
-    fn write_message(&mut self, msg: LaunchMessage) -> Result<(), MidiInterfaceError>;
+    fn write_message(&mut self, msg: MidiMessage) -> Result<(), MidiInterfaceError>;
 
     /// Write multiple messages to output port
-    fn write_messages(&mut self, msg: Vec<LaunchMessage>) -> Result<(), MidiInterfaceError>;
+    fn write_messages(&mut self, msg: Vec<MidiMessage>) -> Result<(), MidiInterfaceError>;
 }
 
 /// Trait representing an Input compatible with LaunchDevice and MidiInterface

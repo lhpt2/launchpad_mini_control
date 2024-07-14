@@ -24,6 +24,8 @@ pub use midilib::*;
 mod midirs_impl;
 #[cfg(all(feature = "midir", not(feature = "pm")))]
 pub use midirs_impl::*;
+#[cfg(all(feature = "midir", not(feature = "pm")))]
+pub type LaunchDevice = LaunchDeviceTemplate<midirs_impl::InputPort, midirs_impl::OutputPort>;
 
 /// The types and implementations in this module do have to be implemented
 #[cfg(all(feature = "pm", not(feature = "midir")))]
@@ -32,6 +34,8 @@ mod pm_impl;
 pub use pm_impl::*;
 #[cfg(all(feature = "pm", not(feature = "midir")))]
 pub use pm_impl::{InputPort, MidiImpl, OutputPort};
+#[cfg(all(feature = "pm", not(feature = "midir")))]
+pub type LaunchDevice = LaunchDeviceTemplate<pm_impl::InputPort, pm_impl::OutputPort>;
 
 pub use utils::Color;
 pub use utils::MatPos;
@@ -50,7 +54,7 @@ pub fn new_launch_device_from_midi_interface<'a>(
         MidiInput = InputPort,
         MidiOutput = OutputPort,
     >,
-) -> LaunchDevice<InputPort, OutputPort> {
+) -> LaunchDevice {
     let (in_p, out_p) = match ctx.get_in_out("Launchpad Mini MIDI 1") {
         Ok(res) => (res.0, res.1),
         Err(e) => match e {
@@ -67,5 +71,11 @@ pub fn new_launch_device_from_midi_interface<'a>(
         },
     };
 
-    LaunchDevice::new(in_p, out_p)
+    LaunchDeviceTemplate::new(in_p, out_p)
+}
+
+pub fn new_launch_device_with_midi_init() -> (MidiImpl, LaunchDevice) {
+    let midi = MidiImpl::new("LaunchControl");
+    let lpad = new_launch_device_from_midi_interface(&midi);
+    (midi, lpad)
 }
